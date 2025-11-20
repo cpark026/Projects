@@ -1,0 +1,21 @@
+lat,lon,probability,hour,location_name
+37.5407,-77.4360,0.65,8,Richmond
+37.5507,-77.4260,0.58,8,Richmond
+37.5307,-77.4460,0.72,8,Richmond
+36.8529,-75.9780,0.55,17,Virginia Beach
+36.8629,-75.9680,0.68,17,Virginia Beach
+36.8429,-75.9880,0.62,17,Virginia Beach
+38.8816,-77.0910,0.78,18,Arlington
+38.8916,-77.0810,0.71,18,Arlington
+38.8716,-77.1010,0.69,18,Arlington
+37.2710,-79.9414,0.45,12,Roanoke
+37.2810,-79.9314,0.51,12,Roanoke
+37.2610,-79.9514,0.48,12,Roanoke
+38.0293,-78.4767,0.42,15,Charlottesville
+38.0393,-78.4667,0.38,15,Charlottesville
+38.0193,-78.4867,0.44,15,Charlottesville
+37.5407,-77.4360,0.38,23,Richmond
+37.5507,-77.4260,0.41,23,Richmond
+36.8529,-75.9780,0.35,23,Virginia Beach
+38.8816,-77.0910,0.52,7,Arlington
+37.2710,-79.9414,0.28,7,Roanoke
