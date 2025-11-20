@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Virginia Crash Hot Spot Map - Hourly Predictions</title>
+    
+    <!-- Note: In production, download Leaflet from https://leafletjs.com/download.html -->
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+          crossorigin="" 
+          onerror="console.warn('Leaflet CSS failed to load from CDN. Please download locally for offline use.')"/>
+    
+    <!-- Leaflet MarkerCluster CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" 
+          onerror="console.warn('Leaflet MarkerCluster CSS failed to load from CDN.')"/>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" 
+          onerror="console.warn('Leaflet MarkerCluster Default CSS failed to load from CDN.')"/>
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Virginia Crash Hot Spot Predictions</h1>
+            <p class="subtitle">Interactive hourly crash risk visualization based on ML predictions (2017-2025)</p>
+        </header>
+        
+        <div class="controls-panel">
+            <div class="time-control">
+                <label for="hourSlider">
+                    <strong>Select Hour:</strong>
+                    <span id="hourDisplay">12:00</span>
+                </label>
+                <input type="range" id="hourSlider" min="0" max="23" value="12" step="1">
+                <div class="hour-labels">
+                    <span>00:00</span>
+                    <span>06:00</span>
+                    <span>12:00</span>
+                    <span>18:00</span>
+                    <span>23:00</span>
+                </div>
+            </div>
+            
+            <div class="filter-controls">
+                <label>
+                    <strong>Min Risk Threshold:</strong>
+                    <span id="thresholdDisplay">0.3</span>
+                </label>
+                <input type="range" id="thresholdSlider" min="0" max="1" value="0.3" step="0.05">
+                
+                <button id="loadDataBtn" class="btn-primary">Load Sample Data</button>
+                <button id="resetBtn" class="btn-secondary">Reset View</button>
+            </div>
+        </div>
+        
+        <div id="map"></div>
+        
+        <div class="legend">
+            <h3>Risk Level</h3>
+            <div class="legend-item">
+                <span class="legend-color" style="background-color: #800026;"></span>
+                <span>Very High (0.8 - 1.0)</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-color" style="background-color: #BD0026;"></span>
+                <span>High (0.6 - 0.8)</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-color" style="background-color: #E31A1C;"></span>
+                <span>Moderate-High (0.5 - 0.6)</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-color" style="background-color: #FC4E2A;"></span>
+                <span>Moderate (0.4 - 0.5)</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-color" style="background-color: #FD8D3C;"></span>
+                <span>Low-Moderate (0.3 - 0.4)</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-color" style="background-color: #FEB24C;"></span>
+                <span>Low (0.2 - 0.3)</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-color" style="background-color: #FED976;"></span>
+                <span>Very Low (0.0 - 0.2)</span>
+            </div>
+        </div>
+        
+        <div class="info-panel">
+            <h3>Instructions</h3>
+            <ul>
+                <li>Use the <strong>hour slider</strong> to view crash predictions for different times of day</li>
+                <li>Adjust the <strong>risk threshold</strong> to filter locations by minimum risk level</li>
+                <li>Click on markers to see detailed risk information</li>
+                <li>Markers are color-coded by risk level (see legend)</li>
+                <li>Use <strong>Load Sample Data</strong> to load demonstration data</li>
+            </ul>
+            
+            <h3>About</h3>
+            <p>This map visualizes predicted crash hot spots across Virginia using machine learning models trained on historical crash data from 2017-2025. Predictions are available for each hour of the day.</p>
+        </div>
+        
+        <footer>
+            <p>Data Source: Virginia Crash Records 2017-2025 | Model: R Studio ML Pipeline</p>
+            <p>For documentation and setup instructions, see <a href="docs/README.md">README.md</a></p>
+        </footer>
+    </div>
+    
+    <!-- Note: In production, download Leaflet from https://leafletjs.com/download.html -->
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+            crossorigin=""
+            onerror="console.error('Leaflet JS failed to load from CDN. Please download locally for offline use.'); document.body.innerHTML+='<div style=padding:20px;background:red;color:white;text-align:center;>ERROR: Map library failed to load. Please check your internet connection or download libraries locally.</div>';"></script>
+    
+    <!-- Leaflet MarkerCluster JS -->
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"
+            onerror="console.warn('Leaflet MarkerCluster JS failed to load from CDN.')"></script>
+    
+    <!-- Custom JS -->
+    <script src="assets/js/app.js"></script>
+</body>
+</html>
