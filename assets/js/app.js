@@ -4,19 +4,15 @@ let markerClusterGroup;
 let crashData = [];
 let currentHour = 12;
 let currentThreshold = 0.3;
-const options = {
-    timeZone: 'America/New_York',
-    year: 'numeric',
-    month: 'numeric',
-    day: 'numeric'
-};
-let currentDate = new Date().toLocaleDateString("en-US", options);
+let currentDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+let isGeneratingPredictions = false;
 
 let paginatedData = [];
 let currentPage = 0;
 
 const itemsPerPage = 5;
 const chunkSize = 10;
+const API_URL = 'http://localhost:3000/api'; // Backend API URL
 
 // Initialize map
 function initMap() {
@@ -290,6 +286,63 @@ async function loadPredictionsForDate(date) {
     }
 }
 
+// Generate predictions from backend API for the current date
+async function generatePredictionsFromBackend() {
+    if (isGeneratingPredictions) {
+        console.log('Predictions already being generated...');
+        return false;
+    }
+    
+    try {
+        isGeneratingPredictions = true;
+        
+        // Show loading status
+        const statusElement = document.querySelector('.summary');
+        if (statusElement) {
+            statusElement.innerHTML = '<h3>Generating predictions...</h3><p>Running R script for ' + currentDate + '</p>';
+        }
+        
+        console.log('Requesting predictions for:', currentDate);
+        
+        // Call backend API
+        const response = await fetch(`${API_URL}/predictions`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ date: currentDate })
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to generate predictions');
+        }
+        
+        const result = await response.json();
+        console.log('Predictions generated:', result.message);
+        
+        // Parse CSV from response
+        if (result.csv) {
+            crashData = parseCSV(result.csv);
+            console.log(`Loaded ${crashData.length} predictions for ${currentDate}`);
+            updateMarkers();
+            createSummary();
+            return true;
+        }
+        
+    } catch (error) {
+        console.error('Error generating predictions:', error);
+        const statusElement = document.querySelector('.summary');
+        if (statusElement) {
+            statusElement.innerHTML = '<h3>Error</h3><p>Failed to generate predictions: ' + error.message + '</p><p>Make sure the backend server is running: npm start</p>';
+        }
+        return false;
+        
+    } finally {
+        isGeneratingPredictions = false;
+    }
+}
+
 // Load data from CSV file or use sample data
 async function loadData(dataPath = null) {
     try {
@@ -386,12 +439,18 @@ function initEventListeners() {
         createSummary();
     });
 
-    // Load data button
-    document.getElementById('loadDataBtn').addEventListener('click', () => {
-        // Try to load from data directory, otherwise use sample data
-        loadData('data/crash_predictions.csv').catch(() => {
-            loadData();
-        });
+    // Load data button - Generate predictions from backend API
+    document.getElementById('loadDataBtn').addEventListener('click', async () => {
+        // Try to generate from backend API first
+        const success = await generatePredictionsFromBackend();
+        
+        if (!success) {
+            // If backend is not available, try to load pre-generated CSV
+            console.log('Backend not available, trying pre-generated CSV...');
+            loadData('data/crash_predictions.csv').catch(() => {
+                loadData();
+            });
+        }
     });
 
     // Reset button
@@ -441,10 +500,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Set date picker to current date
     console.log(`Current Date: ${currentDate}`);
-    const month = currentDate.split('/')[0];
-    const day = currentDate.split('/')[1];
-    const year = currentDate.split('/')[2];
-    document.getElementById('datePicker').value = `${year}-${month}-${day}`;
+    document.getElementById('datePicker').value = currentDate;
 
     // Initialize sliders
     const hourSlider = document.getElementById('hourSlider');
