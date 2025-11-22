@@ -58,20 +58,32 @@ app.post('/api/predictions', async (req, res) => {
         const { date } = req.body;
         
         if (!date) {
-            return res.status(400).json({ error: 'Date is required (YYYY-MM-DD format)' });
+            return res.status(400).json({ error: 'Date is required (MM-DD-YYYY, MM/DD/YYYY, or YYYY-MM-DD format)' });
         }
         
-        // Validate date format
-        const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-        if (!dateRegex.test(date)) {
-            return res.status(400).json({ error: 'Invalid date format. Use YYYY-MM-DD' });
+        // Convert to YYYY-MM-DD format for R script
+        let formattedDate = date;
+        
+        // Handle MM-DD-YYYY or MM/DD/YYYY format
+        const mmddyyyyRegex = /^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})$/;
+        let match = date.match(mmddyyyyRegex);
+        if (match) {
+            // Convert MM-DD-YYYY or MM/DD/YYYY to YYYY-MM-DD
+            formattedDate = `${match[3]}-${match[1].padStart(2, '0')}-${match[2].padStart(2, '0')}`;
+        } else {
+            // Validate YYYY-MM-DD format
+            const yyyymmddRegex = /^\d{4}-\d{2}-\d{2}$/;
+            if (!yyyymmddRegex.test(date)) {
+                return res.status(400).json({ error: 'Invalid date format. Use MM-DD-YYYY, MM/DD/YYYY, or YYYY-MM-DD' });
+            }
+            formattedDate = date;
         }
         
-        console.log(`Generating predictions for ${date}...`);
+        console.log(`Generating predictions for ${formattedDate}...`);
         
-        // Run R script with date parameter
+        // Run R script with date parameter (YYYY-MM-DD format)
         const rScriptPath = path.join(__dirname, 'r-scripts', 'export_predictions.R');
-        const command = getRScriptCommand(rScriptPath) + ` "${date}"`;
+        const command = getRScriptCommand(rScriptPath) + ` "${formattedDate}"`;
         
         console.log(`Executing: ${command}`);
         
@@ -105,7 +117,7 @@ app.post('/api/predictions', async (req, res) => {
             
             res.json({
                 success: true,
-                message: `Predictions generated for ${date}`,
+                message: `Predictions generated for ${formattedDate}`,
                 csv: csvData,
                 timestamp: new Date().toISOString()
             });
