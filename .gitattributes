@@ -1,1 +1,17 @@
 .rds filter=lfs diff=lfs merge=lfs -text
+
+# CSV files should use LF (Unix line endings)
+*.csv text eol=lf
+
+# JavaScript, HTML, CSS should use LF
+*.js text eol=lf
+*.html text eol=lf
+*.css text eol=lf
+*.json text eol=lf
+
+# R files should use LF
+*.R text eol=lf
+*.Rmd text eol=lf
+
+# Markdown should use LF
+*.md text eol=lf

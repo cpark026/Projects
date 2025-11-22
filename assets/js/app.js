@@ -99,17 +99,19 @@ function createPopupContent(location) {
     `;
 }
 
-// Update markers based on selected hour and threshold
+// Update markers based on selected date, hour and threshold
 function updateMarkers() {
     // Clear existing markers
     markerClusterGroup.clearLayers();
 
-    // Filter data by current hour and threshold
-    const filteredData = crashData.filter(location =>
-        location.hour === currentHour && location.probability >= currentThreshold
-    );
+    // Filter data by current date, hour and threshold
+    const filteredData = crashData.filter(location => {
+        // If location has a date field, filter by it; otherwise show all
+        const dateMatch = !location.date || location.date === currentDate;
+        return dateMatch && location.hour === currentHour && location.probability >= currentThreshold;
+    });
 
-    console.log(`Displaying ${filteredData.length} locations for hour ${currentHour} with threshold ${currentThreshold}`);
+    console.log(`Displaying ${filteredData.length} locations for ${currentDate} at hour ${currentHour} with threshold ${currentThreshold}`);
 
     // Add markers for filtered data
     filteredData.forEach(location => {
@@ -251,6 +253,43 @@ function generateSampleData() {
     return sampleData;
 }
 
+// Load predictions from pre-generated CSV file for a specific date
+async function loadPredictionsForDate(date) {
+    try {
+        const statusElement = document.querySelector('.summary');
+        if (statusElement) {
+            statusElement.innerHTML = '<h3>Loading predictions...</h3><p>Loading data for ' + date + '</p>';
+        }
+        
+        console.log('Loading predictions for:', date);
+        
+        // Load the date-specific CSV file
+        const csvPath = `data/by-date/predictions_${date}.csv`;
+        
+        const response = await fetch(csvPath);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const csvText = await response.text();
+        crashData = parseCSV(csvText);
+        
+        console.log(`Loaded ${crashData.length} predictions for ${date}`);
+        updateMarkers();
+        createSummary();
+        return true;
+        
+    } catch (error) {
+        console.error('Error loading predictions:', error);
+        const statusElement = document.querySelector('.summary');
+        if (statusElement) {
+            statusElement.innerHTML = '<h3>Error</h3><p>Failed to load predictions for ' + date + '</p>';
+        }
+        return false;
+    }
+}
+
 // Load data from CSV file or use sample data
 async function loadData(dataPath = null) {
     try {
@@ -313,6 +352,18 @@ function resetView() {
 
 // Initialize event listeners
 function initEventListeners() {
+    // Date picker
+    const datePicker = document.getElementById('datePicker');
+    if (datePicker) {
+        datePicker.addEventListener('change', async (e) => {
+            currentDate = e.target.value;
+            console.log(`Date changed to: ${currentDate}`);
+            
+            // Load pre-generated predictions for the selected date
+            await loadPredictionsForDate(currentDate);
+        });
+    }
+
     // Hour slider
     const hourSlider = document.getElementById('hourSlider');
     const hourDisplay = document.getElementById('hourDisplay');
@@ -321,6 +372,7 @@ function initEventListeners() {
         currentHour = parseInt(e.target.value);
         hourDisplay.textContent = formatHour(currentHour);
         updateMarkers();
+        createSummary();
     });
 
     // Threshold slider
@@ -331,6 +383,7 @@ function initEventListeners() {
         currentThreshold = parseFloat(e.target.value);
         thresholdDisplay.textContent = currentThreshold.toFixed(2);
         updateMarkers();
+        createSummary();
     });
 
     // Load data button
@@ -386,12 +439,14 @@ document.addEventListener('DOMContentLoaded', () => {
     initMap();
     initEventListeners();
 
+    // Set date picker to current date
     console.log(`Current Date: ${currentDate}`);
     const month = currentDate.split('/')[0];
     const day = currentDate.split('/')[1];
     const year = currentDate.split('/')[2];
     document.getElementById('datePicker').value = `${year}-${month}-${day}`;
 
+    // Initialize sliders
     const hourSlider = document.getElementById('hourSlider');
     updateThresholdSliderThumb();
 
@@ -400,7 +455,12 @@ document.addEventListener('DOMContentLoaded', () => {
         updateHourSliderThumb(); // Set initial color
     }
 
-    // Automatically load sample data on startup
-    loadData();
-    createSummary();
+    // Load predictions for today on startup
+    loadPredictionsForDate(currentDate).then(success => {
+        if (!success) {
+            // Fallback to sample data if file doesn't exist
+            console.log('Falling back to sample data');
+            loadData();
+        }
+    });
 });

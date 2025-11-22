@@ -1,20 +1,51 @@
 # R Script for Exporting Crash Predictions to CSV
 # This script demonstrates how to export ML model predictions for the Virginia Crash Hot Spot Map
+# Can be called from command line with a date parameter: Rscript export_predictions.R "2025-11-22"
 
 # Load required libraries
 library(dplyr)
 library(readr)
 library(lubridate)
 
-setwd("Projects/r-scripts")
+# Get the script's directory and set it as working directory
+# This handles both interactive and command-line execution
+if (exists("rstudioapi") && rstudioapi::isAvailable()) {
+  script_dir <- dirname(rstudioapi::getActiveDocumentContext()$path)
+  setwd(script_dir)
+} else {
+  # For command line execution, assume we're already in the right directory
+  # or use the directory of the script file
+  script_file <- commandArgs()[grep("--file=", commandArgs())]
+  if (length(script_file) > 0) {
+    script_dir <- dirname(sub("--file=", "", script_file[1]))
+    setwd(script_dir)
+  }
+}
+
+# Get date from command line arguments
+args <- commandArgs(trailingOnly = TRUE)
+prediction_date <- if (length(args) > 0) args[1] else Sys.Date()
+
+# Ensure date is in proper format
+if (is.character(prediction_date)) {
+  prediction_date <- as.Date(prediction_date, format = "%Y-%m-%d")
+  if (is.na(prediction_date)) {
+    stop("Invalid date format. Please use YYYY-MM-DD")
+  }
+} else {
+  prediction_date <- as.Date(prediction_date)
+}
+
+cat("Generating predictions for:", format(prediction_date, "%Y-%m-%d"), "\n")
 
 # Function to export predictions to CSV format
-export_crash_predictions <- function(predictions_df, output_file = "crash_predictions.csv") {
+export_crash_predictions <- function(predictions_df, output_file = "crash_predictions.csv", prediction_date = Sys.Date()) {
   # Ensure the dataframe has the required columns:
   # - lat: latitude (numeric)
   # - lon: longitude (numeric)
   # - probability: crash risk probability 0-1 (numeric)
   # - hour: hour of day 0-23 (integer)
+  # - date: date of prediction YYYY-MM-DD (character, optional)
   # - location_name: optional location identifier (character)
   
   # Validate required columns
@@ -25,13 +56,14 @@ export_crash_predictions <- function(predictions_df, output_file = "crash_predic
     stop(paste("Missing required columns:", paste(missing_cols, collapse = ", ")))
   }
   
-  # Ensure proper data types
+  # Ensure proper data types and add date column
   predictions_df <- predictions_df %>%
     mutate(
       lat = as.numeric(lat),
       lon = as.numeric(lon),
       probability = as.numeric(probability),
-      hour = as.integer(hour)
+      hour = as.integer(hour),
+      date = format(prediction_date, "%Y-%m-%d")
     ) %>%
     # Ensure probability is between 0 and 1
     mutate(probability = pmax(0, pmin(1, probability))) %>%
@@ -43,6 +75,7 @@ export_crash_predictions <- function(predictions_df, output_file = "crash_predic
   
   cat(sprintf("Exported %d predictions to %s\n", nrow(predictions_df), output_file))
   cat("Columns:", paste(names(predictions_df), collapse = ", "), "\n")
+  cat("Date:", format(prediction_date, "%Y-%m-%d"), "\n")
   return(invisible(output_file))
 }
 
@@ -111,7 +144,7 @@ if (!interactive()) {
   #   select(lat, lon, probability, hour, location_name)
   
   # Export predictions
-  export_crash_predictions(predictions, "../data/crash_predictions.csv")
+  export_crash_predictions(predictions, "../data/crash_predictions.csv", prediction_date)
   
   # Print summary statistics
   cat("\nSummary Statistics:\n")
@@ -120,5 +153,6 @@ if (!interactive()) {
   cat("Probability range:", sprintf("%.3f - %.3f", min(predictions$probability), max(predictions$probability)), "\n")
   cat("Locations:", paste(unique(predictions$location_name), collapse = ", "), "\n")
   cat("\nModel file used: models/virginia_crash_severity_model.rds\n")
+  cat("Date parameter:", format(prediction_date, "%Y-%m-%d"), "\n")
 }
 
