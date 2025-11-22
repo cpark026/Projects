@@ -4,6 +4,12 @@
 .Rproj.user/
 *.Rproj
 
+# Large model files (too big for GitHub, keep locally)
+*.rds
+*.RData
+*.rda
+r-scripts/models/
+
 # macOS
 .DS_Store
 .AppleDouble
