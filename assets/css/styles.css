@@ -62,34 +62,58 @@ header h1 {
 
 #hourSlider,
 #thresholdSlider {
+    -webkit-appearance: none; /* Chrome/Safari/Edge */
     width: 100%;
     height: 8px;
     border-radius: 5px;
-    outline: none;
-    background: linear-gradient(to right, #667eea, #764ba2);
     margin: 10px 0;
     cursor: pointer;
+    background: transparent; /* important! track gradient is on pseudo-elements */
 }
 
-/* Thumb styling */
-#hourSlider::thumb,
-#thresholdSlider::thumb {
+/* WebKit track (Chrome, Safari, Edge) */
+#hourSlider::-webkit-slider-runnable-track,
+#thresholdSlider::-webkit-slider-runnable-track {
+    width: 100%;
+    height: 8px;
+    border-radius: 5px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+/* Firefox track */
+#hourSlider::-moz-range-track,
+#thresholdSlider::-moz-range-track {
+    width: 100%;
+    height: 8px;
+    border-radius: 5px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+/* WebKit thumb */
+#hourSlider::-webkit-slider-thumb,
+#thresholdSlider::-webkit-slider-thumb {
+    -webkit-appearance: none;
     width: 20px;
     height: 20px;
     border-radius: 50%;
     background: #667eea;
-    cursor: pointer;
     box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    cursor: pointer;
+    margin-top: -6px; /* center thumb on track */
+}
+
+/* Firefox thumb */
+#hourSlider::-moz-range-thumb,
+#thresholdSlider::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #667eea;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    cursor: pointer;
     border: none;
 }
 
-/* Track styling */
-#hourSlider::track,
-#thresholdSlider::track {
-    height: 8px;
-    border-radius: 5px;
-    background: linear-gradient(to right, #667eea, #764ba2);
-}
 
 
 .hour-labels {
