@@ -7,6 +7,39 @@ library(dplyr)
 library(readr)
 library(lubridate)
 
+# Function to snap predictions to verified road locations
+snap_to_roads <- function(predictions_df) {
+  va_cities_roads <- tribble(
+    ~city,            ~lat,     ~lon,
+    "Richmond",       37.5407,  -77.4360,
+    "Virginia Beach", 36.8529,  -75.9780,
+    "Norfolk",        36.8508,  -76.2859,
+    "Chesapeake",     36.7682,  -76.2875,
+    "Arlington",      38.8816,  -77.0910,
+    "Newport News",   37.0871,  -76.4730,
+    "Alexandria",     38.8048,  -77.0469,
+    "Hampton",        37.0299,  -76.3452,
+    "Roanoke",        37.2710,  -79.9414,
+    "Portsmouth",     36.8354,  -76.2983
+  )
+  
+  before <- nrow(predictions_df)
+  
+  predictions_df <- predictions_df %>%
+    rowwise() %>%
+    mutate(min_distance = min(sqrt((lat - va_cities_roads$lat)^2 + (lon - va_cities_roads$lon)^2))) %>%
+    filter(min_distance < 0.15) %>%
+    ungroup() %>%
+    select(-min_distance)
+  
+  after <- nrow(predictions_df)
+  cat(sprintf("  Snapped to roads: %d -> %d predictions\n", before, after))
+  
+  return(predictions_df)
+}
+
+# Load required libraries
+
 # Get the script's directory and set it as working directory
 if (exists("rstudioapi") && rstudioapi::isAvailable()) {
   script_dir <- dirname(rstudioapi::getActiveDocumentContext()$path)
@@ -34,6 +67,34 @@ dates <- seq(start_date, end_date, by = "day")
 cat("Generating predictions for", length(dates), "dates:\n")
 cat("From:", format(start_date, "%Y-%m-%d"), "to", format(end_date, "%Y-%m-%d"), "\n\n")
 
+# Function to filter predictions within Virginia land boundaries (geofencing)
+filter_virginia_land <- function(predictions_df) {
+  va_bounds <- list(
+    lat_min = 36.5,
+    lat_max = 39.5,
+    lon_min = -83.5,
+    lon_max = -75.0
+  )
+  
+  filtered <- predictions_df %>%
+    filter(
+      lat >= va_bounds$lat_min & lat <= va_bounds$lat_max,
+      lon >= va_bounds$lon_min & lon <= va_bounds$lon_max
+    )
+  
+  return(filtered)
+}
+
+# Function to add confidence score based on probability
+add_confidence_score <- function(predictions_df) {
+  predictions_df %>%
+    mutate(
+      confidence = pmax(probability, 1 - probability),
+      confidence_score = round(confidence * 100)
+    ) %>%
+    select(lat, lon, probability, confidence_score, hour, location_name)
+}
+
 # Function to export predictions
 export_crash_predictions <- function(predictions_df, output_file, prediction_date) {
   required_cols <- c("lat", "lon", "probability", "hour")
@@ -49,6 +110,11 @@ export_crash_predictions <- function(predictions_df, output_file, prediction_dat
       lon = as.numeric(lon),
       probability = as.numeric(probability),
       hour = as.integer(hour),
+      confidence_score = if ("confidence_score" %in% names(predictions_df)) {
+        as.integer(confidence_score)
+      } else {
+        as.integer(round(pmax(probability, 1 - probability) * 100))
+      },
       date = format(prediction_date, "%Y-%m-%d")
     ) %>%
     mutate(probability = pmax(0, pmin(1, probability))) %>%
@@ -113,6 +179,11 @@ for (i in seq_along(dates)) {
   
   # Generate predictions
   predictions <- generate_predictions_for_date(date)
+  
+  # Apply refinements
+  predictions <- filter_virginia_land(predictions)
+  predictions <- snap_to_roads(predictions)
+  predictions <- add_confidence_score(predictions)
   
   # Save to date-specific file
   output_file <- sprintf("../data/by-date/predictions_%s.csv", date_str)

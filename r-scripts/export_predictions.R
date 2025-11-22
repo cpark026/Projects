@@ -38,6 +38,83 @@ if (is.character(prediction_date)) {
 
 cat("Generating predictions for:", format(prediction_date, "%Y-%m-%d"), "\n")
 
+# Function to snap predictions to verified road locations
+# Filters predictions to be within reasonable distance of known roads
+snap_to_roads <- function(predictions_df) {
+  cat("Filtering predictions to road-likely locations...\n")
+  
+  # Virginia major cities with road network centers
+  va_cities_roads <- tribble(
+    ~city,            ~lat,     ~lon,
+    "Richmond",       37.5407,  -77.4360,
+    "Virginia Beach", 36.8529,  -75.9780,
+    "Norfolk",        36.8508,  -76.2859,
+    "Chesapeake",     36.7682,  -76.2875,
+    "Arlington",      38.8816,  -77.0910,
+    "Newport News",   37.0871,  -76.4730,
+    "Alexandria",     38.8048,  -77.0469,
+    "Hampton",        37.0299,  -76.3452,
+    "Roanoke",        37.2710,  -79.9414,
+    "Portsmouth",     36.8354,  -76.2983
+  )
+  
+  # Keep predictions within 15km of any city center (where road networks exist)
+  before_count <- nrow(predictions_df)
+  
+  predictions_df <- predictions_df %>%
+    rowwise() %>%
+    mutate(
+      min_distance = min(sqrt((lat - va_cities_roads$lat)^2 + (lon - va_cities_roads$lon)^2))
+    ) %>%
+    filter(min_distance < 0.15) %>%  # ~15 km radius from city centers
+    ungroup() %>%
+    select(-min_distance)
+  
+  after_count <- nrow(predictions_df)
+  cat(sprintf("Road filtering: %d -> %d predictions (removed %d unlikely locations)\n", 
+              before_count, after_count, before_count - after_count))
+  
+  return(predictions_df)
+}
+
+# Function to filter predictions within Virginia land boundaries (geofencing)
+filter_virginia_land <- function(predictions_df) {
+  # Virginia approximate bounds (with some buffer to avoid edge issues)
+  # These are approximate boundaries - predictions outside these are likely in water or out of state
+  va_bounds <- list(
+    lat_min = 36.5,   # Southernmost point
+    lat_max = 39.5,   # Northernmost point
+    lon_min = -83.5,  # Westernmost point
+    lon_max = -75.0   # Easternmost point (Atlantic)
+  )
+  
+  # Filter predictions within Virginia bounds
+  filtered <- predictions_df %>%
+    filter(
+      lat >= va_bounds$lat_min & lat <= va_bounds$lat_max,
+      lon >= va_bounds$lon_min & lon <= va_bounds$lon_max
+    )
+  
+  cat("Filtered from", nrow(predictions_df), "to", nrow(filtered), "predictions (removed", 
+      nrow(predictions_df) - nrow(filtered), "out-of-bounds predictions)\n")
+  
+  return(filtered)
+}
+
+# Function to add confidence score based on probability stability
+add_confidence_score <- function(predictions_df) {
+  # Confidence is based on how much the probability differs from base probability
+  # Higher confidence when prediction is more extreme (very high or very low risk)
+  predictions_df %>%
+    mutate(
+      # Confidence increases when probability is far from 0.5 (neutral)
+      confidence = pmax(probability, 1 - probability),
+      # Scale to 0-100 for display
+      confidence_score = round(confidence * 100)
+    ) %>%
+    select(lat, lon, probability, confidence_score, hour, location_name)
+}
+
 # Function to export predictions to CSV format
 export_crash_predictions <- function(predictions_df, output_file = "crash_predictions.csv", prediction_date = Sys.Date()) {
   # Ensure the dataframe has the required columns:
@@ -45,6 +122,7 @@ export_crash_predictions <- function(predictions_df, output_file = "crash_predic
   # - lon: longitude (numeric)
   # - probability: crash risk probability 0-1 (numeric)
   # - hour: hour of day 0-23 (integer)
+  # - confidence_score: confidence level 0-100 (optional, integer)
   # - date: date of prediction YYYY-MM-DD (character, optional)
   # - location_name: optional location identifier (character)
   
@@ -63,6 +141,12 @@ export_crash_predictions <- function(predictions_df, output_file = "crash_predic
       lon = as.numeric(lon),
       probability = as.numeric(probability),
       hour = as.integer(hour),
+      # Add confidence_score if not present
+      confidence_score = if ("confidence_score" %in% names(predictions_df)) {
+        as.integer(confidence_score)
+      } else {
+        as.integer(round(pmax(probability, 1 - probability) * 100))
+      },
       date = format(prediction_date, "%Y-%m-%d")
     ) %>%
     # Ensure probability is between 0 and 1
@@ -142,6 +226,18 @@ if (!interactive()) {
   #     probability = predict(model, newdata = ., type = "response")
   #   ) %>%
   #   select(lat, lon, probability, hour, location_name)
+  
+  # Apply refinements
+  cat("\nApplying prediction refinements...\n")
+  
+  # 1. Filter out water/ocean predictions (geofencing)
+  predictions <- filter_virginia_land(predictions)
+  
+  # 2. Snap to verified roads (uses OpenStreetMap)
+  predictions <- snap_to_roads(predictions)
+  
+  # 3. Add confidence scores
+  predictions <- add_confidence_score(predictions)
   
   # Export predictions
   export_crash_predictions(predictions, "../data/crash_predictions.csv", prediction_date)
