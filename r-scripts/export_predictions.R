@@ -6,8 +6,7 @@ library(dplyr)
 library(readr)
 library(lubridate)
 
-# Example: Export predictions from your ML model
-# Replace this with your actual model and prediction code
+setwd("Projects/r-scripts")
 
 # Function to export predictions to CSV format
 export_crash_predictions <- function(predictions_df, output_file = "crash_predictions.csv") {
@@ -51,7 +50,7 @@ export_crash_predictions <- function(predictions_df, output_file = "crash_predic
 # Example usage with synthetic data
 # Replace this section with your actual model predictions
 
-generate_example_predictions <- function() {
+generate_predictions <- function() {
   # Virginia major cities coordinates
   va_cities <- tribble(
     ~city,            ~lat,     ~lon,
@@ -95,11 +94,25 @@ generate_example_predictions <- function() {
 
 # Main execution
 if (!interactive()) {
-  # Generate example predictions
-  predictions <- generate_example_predictions()
+  # Load your trained model
+  model <- readRDS("models/virginia_crash_severity_model.rds")
   
-  # Export to CSV
-  export_crash_predictions(predictions, "data/crash_predictions.csv")
+  cat("Model loaded successfully!\n")
+  cat("Model class:", class(model), "\n")
+  
+  # Option 1: Use generated example predictions if prediction data is not available
+  predictions <- generate_predictions()
+  
+  # Option 2: If you have prediction_features.csv, uncomment the following:
+  # prediction_data <- read_csv("data/prediction_features.csv")
+  # predictions <- prediction_data %>%
+  #   mutate(
+  #     probability = predict(model, newdata = ., type = "response")
+  #   ) %>%
+  #   select(lat, lon, probability, hour, location_name)
+  
+  # Export predictions
+  export_crash_predictions(predictions, "../data/crash_predictions.csv")
   
   # Print summary statistics
   cat("\nSummary Statistics:\n")
@@ -107,23 +120,6 @@ if (!interactive()) {
   cat("Hours covered:", paste(sort(unique(predictions$hour)), collapse = ", "), "\n")
   cat("Probability range:", sprintf("%.3f - %.3f", min(predictions$probability), max(predictions$probability)), "\n")
   cat("Locations:", paste(unique(predictions$location_name), collapse = ", "), "\n")
+  cat("\nModel file used: models/virginia_crash_severity_model.rds\n")
 }
 
-# Example: If you have your own ML model
-# Uncomment and modify the following to use your model:
-
-# # Load your trained model
-# model <- readRDS("models/crash_prediction_model.rds")
-# 
-# # Load or create prediction data (features for each location and hour)
-# prediction_data <- read_csv("data/prediction_features.csv")
-# 
-# # Make predictions
-# predictions <- prediction_data %>%
-#   mutate(
-#     probability = predict(model, newdata = ., type = "response")
-#   ) %>%
-#   select(lat, lon, probability, hour, location_name)
-# 
-# # Export predictions
-# export_crash_predictions(predictions, "output/crash_predictions.csv")
