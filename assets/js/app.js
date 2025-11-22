@@ -4,18 +4,27 @@ let markerClusterGroup;
 let crashData = [];
 let currentHour = 12;
 let currentThreshold = 0.3;
+let paginatedData = [];
+let currentPage = 0;
+
+const itemsPerPage = 5;
+const chunkSize = 10;
 
 // Initialize map
 function initMap() {
     // Center on Virginia
     map = L.map('map').setView([37.5407, -78.8], 7);
-    
+
     // Add OpenStreetMap tiles
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
         maxZoom: 19
     }).addTo(map);
-    
+
+    // L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+    // attribution: 'Tiles &copy; Esri'
+    // }).addTo(map);
+
     // Initialize marker cluster group
     markerClusterGroup = L.markerClusterGroup({
         maxClusterRadius: 50,
@@ -23,9 +32,9 @@ function initMap() {
         showCoverageOnHover: false,
         zoomToBoundsOnClick: true
     });
-    
+
     map.addLayer(markerClusterGroup);
-    
+
     console.log('Map initialized');
 }
 
@@ -70,7 +79,7 @@ function createCustomIcon(color) {
 function createPopupContent(location) {
     const riskLevel = getRiskLevel(location.probability);
     const color = getRiskColor(location.probability);
-    
+
     return `
         <div class="popup-title">Crash Hot Spot</div>
         <div class="popup-info">
@@ -87,30 +96,98 @@ function createPopupContent(location) {
 function updateMarkers() {
     // Clear existing markers
     markerClusterGroup.clearLayers();
-    
+
     // Filter data by current hour and threshold
-    const filteredData = crashData.filter(location => 
+    const filteredData = crashData.filter(location =>
         location.hour === currentHour && location.probability >= currentThreshold
     );
-    
+
     console.log(`Displaying ${filteredData.length} locations for hour ${currentHour} with threshold ${currentThreshold}`);
-    
+
     // Add markers for filtered data
     filteredData.forEach(location => {
         const color = getRiskColor(location.probability);
         const marker = L.marker([location.lat, location.lon], {
             icon: createCustomIcon(color)
         });
-        
+
         marker.bindPopup(createPopupContent(location));
         markerClusterGroup.addLayer(marker);
     });
 }
 
+function createSummary() {
+    const summaryData = crashData.filter(
+        loc => loc.probability >= currentThreshold
+    );
+
+    // break into chunks of 10
+    paginatedData = [];
+    for (let i = 0; i < summaryData.length; i += chunkSize) {
+        paginatedData.push(summaryData.slice(i, i + chunkSize));
+    }
+
+    currentPage = 0;
+    renderSummaryPage();
+}
+
+
+function renderSummaryPage() {
+    const summaryDiv = document.querySelector(".summary");
+
+    if (paginatedData.length === 0) {
+        summaryDiv.innerHTML = `
+            <h3>Summary</h3>
+            <p>No results above threshold.</p>
+        `;
+        return;
+    }
+
+    // take first 5 items from the current chunk
+    const page = paginatedData[currentPage];
+    const visibleItems = page.slice(0, itemsPerPage);
+
+    const itemsHTML = visibleItems.map(item => `
+        <div class="summaryItem">
+            <strong>${item.location_name}</strong><br>
+            Probability: ${item.probability.toFixed(3)}<br>
+            Lat: ${item.lat}, Lon: ${item.lon}
+        </div>
+    `).join("");
+
+    summaryDiv.innerHTML = `
+        <h3>Summary</h3>
+
+        ${itemsHTML}
+
+        <div class="summaryControls">
+            <button id="prevPage">← Back</button>
+            <span>Page ${currentPage + 1} / ${paginatedData.length}</span>
+            <button id="nextPage">Next →</button>
+        </div>
+    `;
+
+    // Reattach events because we re-render the HTML
+    document.getElementById("nextPage").onclick = () => {
+        if (currentPage < paginatedData.length - 1) {
+            currentPage++;
+            renderSummaryPage();
+        }
+    };
+
+    document.getElementById("prevPage").onclick = () => {
+        if (currentPage > 0) {
+            currentPage--;
+            renderSummaryPage();
+        }
+    };
+}
+
+
 // Generate sample data for demonstration
 function generateSampleData() {
     const sampleData = [];
-    
+
     // Virginia cities with approximate coordinates
     const vaLocations = [
         { name: 'Richmond', lat: 37.5407, lon: -77.4360 },
@@ -134,7 +211,7 @@ function generateSampleData() {
         { name: 'Winchester', lat: 39.1857, lon: -78.1633 },
         { name: 'Manassas', lat: 38.7509, lon: -77.4753 }
     ];
-    
+
     // Generate predictions for each location and each hour
     vaLocations.forEach(location => {
         for (let hour = 0; hour < 24; hour++) {
@@ -143,16 +220,16 @@ function generateSampleData() {
                 // Add some random offset to create multiple spots
                 const latOffset = (Math.random() - 0.5) * 0.1;
                 const lonOffset = (Math.random() - 0.5) * 0.1;
-                
+
                 // Generate probability based on hour (higher during rush hours and night)
                 let baseProbability = 0.2;
                 if (hour >= 7 && hour <= 9) baseProbability = 0.5; // Morning rush
                 if (hour >= 16 && hour <= 18) baseProbability = 0.6; // Evening rush
                 if (hour >= 22 || hour <= 2) baseProbability = 0.4; // Late night
-                
+
                 // Add random variation
                 const probability = Math.min(0.95, Math.max(0.05, baseProbability + (Math.random() - 0.5) * 0.3));
-                
+
                 sampleData.push({
                     lat: location.lat + latOffset,
                     lon: location.lon + lonOffset,
@@ -163,7 +240,7 @@ function generateSampleData() {
             }
         }
     });
-    
+
     return sampleData;
 }
 
@@ -181,7 +258,7 @@ async function loadData(dataPath = null) {
             crashData = generateSampleData();
             console.log(`Generated ${crashData.length} sample records`);
         }
-        
+
         updateMarkers();
         return true;
     } catch (error) {
@@ -198,13 +275,13 @@ function parseCSV(csvText) {
     const lines = csvText.split('\n');
     const headers = lines[0].split(',').map(h => h.trim());
     const data = [];
-    
+
     for (let i = 1; i < lines.length; i++) {
         if (lines[i].trim() === '') continue;
-        
+
         const values = lines[i].split(',');
         const record = {};
-        
+
         headers.forEach((header, index) => {
             const value = values[index]?.trim();
             if (header === 'lat' || header === 'lon' || header === 'probability') {
@@ -215,10 +292,10 @@ function parseCSV(csvText) {
                 record[header] = value;
             }
         });
-        
+
         data.push(record);
     }
-    
+
     return data;
 }
 
@@ -232,23 +309,23 @@ function initEventListeners() {
     // Hour slider
     const hourSlider = document.getElementById('hourSlider');
     const hourDisplay = document.getElementById('hourDisplay');
-    
+
     hourSlider.addEventListener('input', (e) => {
         currentHour = parseInt(e.target.value);
         hourDisplay.textContent = formatHour(currentHour);
         updateMarkers();
     });
-    
+
     // Threshold slider
     const thresholdSlider = document.getElementById('thresholdSlider');
     const thresholdDisplay = document.getElementById('thresholdDisplay');
-    
+
     thresholdSlider.addEventListener('input', (e) => {
         currentThreshold = parseFloat(e.target.value);
         thresholdDisplay.textContent = currentThreshold.toFixed(2);
         updateMarkers();
     });
-    
+
     // Load data button
     document.getElementById('loadDataBtn').addEventListener('click', () => {
         // Try to load from data directory, otherwise use sample data
@@ -256,18 +333,28 @@ function initEventListeners() {
             loadData();
         });
     });
-    
+
     // Reset button
     document.getElementById('resetBtn').addEventListener('click', resetView);
 }
 
+const slider = document.getElementById("thresholdSlider");
+
+slider.addEventListener("input", () => {
+    currentThreshold = slider.value;
+    console.log("Threshold changed to:", currentThreshold);
+    createSummary();
+});
+
 // Initialize app when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
     console.log('Initializing Virginia Crash Hot Spot Map...');
-    
+
     initMap();
     initEventListeners();
-    
+
     // Automatically load sample data on startup
     loadData();
+
+    createSummary();
 });

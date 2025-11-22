@@ -60,38 +60,37 @@ header h1 {
     margin-left: 10px;
 }
 
-#hourSlider, #thresholdSlider {
+#hourSlider,
+#thresholdSlider {
     width: 100%;
     height: 8px;
     border-radius: 5px;
     outline: none;
-    -webkit-appearance: none;
     background: linear-gradient(to right, #667eea, #764ba2);
     margin: 10px 0;
+    cursor: pointer;
 }
 
-#hourSlider::-webkit-slider-thumb,
-#thresholdSlider::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
+/* Thumb styling */
+#hourSlider::thumb,
+#thresholdSlider::thumb {
     width: 20px;
     height: 20px;
     border-radius: 50%;
     background: #667eea;
     cursor: pointer;
     box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-}
-
-#hourSlider::-moz-range-thumb,
-#thresholdSlider::-moz-range-thumb {
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    background: #667eea;
-    cursor: pointer;
     border: none;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
+
+/* Track styling */
+#hourSlider::track,
+#thresholdSlider::track {
+    height: 8px;
+    border-radius: 5px;
+    background: linear-gradient(to right, #667eea, #764ba2);
+}
+
 
 .hour-labels {
     display: flex;
@@ -157,17 +156,87 @@ header h1 {
     margin-bottom: 20px;
 }
 
+.box {
+    display: flex;
+    flex-direction: row;
+    gap: 20px;
+    padding: 20px;
+    align-items: flex-start;
+}
+
+.legend, .summary {
+    background: #fff;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    width: 50%;
+}
+
+.legend h3, .summary h3 {
+    color: #667eea;
+    margin-bottom: 10px;
+}
+
+.summaryItem {
+    margin-bottom: 10px;
+}
+
+.summaryControls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 15px;
+    padding-top: 10px;
+    border-top: 1px solid #eee;
+}
+
+.summaryControls button {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.95em;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+#prevPage:hover, #nextPage:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(102, 126, 234, 0.4);
+}
+
+#nextPage, #prevPage {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.summaryControls span {
+    font-size: 0.9em;
+    color: #667eea;
+    font-weight: 600;
+}
+
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.legend-color {
+    width: 20px;
+    height: 20px;
+    display: inline-block;
+    margin-right: 10px;
+    border-radius: 3px;
+}
+
 .legend {
     background: white;
     padding: 15px;
     border-radius: 10px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     margin-bottom: 20px;
-}
-
-.legend h3 {
-    margin-bottom: 10px;
-    color: #667eea;
 }
 
 .legend-item {
