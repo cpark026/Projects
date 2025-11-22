@@ -79,6 +79,7 @@ function createCustomIcon(color) {
 function createPopupContent(location) {
     const riskLevel = getRiskLevel(location.probability);
     const color = getRiskColor(location.probability);
+    const confidence = location.confidence_score || Math.round(Math.max(location.probability, 1 - location.probability) * 100);
 
     return `
         <div class="popup-title">Crash Hot Spot</div>
@@ -87,6 +88,7 @@ function createPopupContent(location) {
             <strong>Hour:</strong> ${formatHour(location.hour)}<br>
             <strong>Risk Level:</strong> <span style="color: ${color};">${riskLevel}</span><br>
             <strong>Probability:</strong> <span class="risk-value" style="color: ${color};">${(location.probability * 100).toFixed(1)}%</span><br>
+            <strong>Confidence:</strong> ${confidence}%<br>
             <strong>Coordinates:</strong> ${location.lat.toFixed(4)}, ${location.lon.toFixed(4)}
         </div>
     `;
@@ -152,14 +154,18 @@ function renderSummaryPage() {
     const page = paginatedData[currentPage];
     const visibleItems = page.slice(0, itemsPerPage);
 
-    const itemsHTML = visibleItems.map((item, index) => `
+    const itemsHTML = visibleItems.map((item, index) => {
+        const confidence = item.confidence_score || Math.round(Math.max(item.probability, 1 - item.probability) * 100);
+        return `
         <div class="summaryItem clickable-item" data-index="${index}" style="cursor: pointer; padding: 10px; border-radius: 5px; transition: background-color 0.2s;">
             <strong>${item.location_name}</strong><br>
             Hour: ${formatHour(item.hour)}<br>
-            Probability: ${item.probability.toFixed(3)}<br>
+            Probability: ${(item.probability * 100).toFixed(1)}%<br>
+            Confidence: ${confidence}%<br>
             Lat: ${item.lat.toFixed(4)}, Lon: ${item.lon.toFixed(4)}
         </div>
-    `).join("");
+    `;
+    }).join("");
 
     summaryDiv.innerHTML = `
         <h3>Summary</h3>
@@ -414,7 +420,7 @@ function parseCSV(csvText) {
             const value = values[index]?.trim();
             if (header === 'lat' || header === 'lon' || header === 'probability') {
                 record[header] = parseFloat(value);
-            } else if (header === 'hour') {
+            } else if (header === 'hour' || header === 'confidence_score') {
                 record[header] = parseInt(value);
             } else {
                 record[header] = value;
