@@ -58,50 +58,54 @@
                 </label>
                 <input type="range" id="thresholdSlider" min="0" max="1" value="0.3" step="0.05">
                 
-                <button id="loadDataBtn" class="btn-primary" title="Load Sample Data">Load Sample Data</button>
-                <button id="resetBtn" class="btn-secondary" title="Load Sample Data">Reset View</button>
+                <div class="button-group">
+                    <button id="loadDataBtn" class="btn-primary" title="Load Prediction Data">Load Prediction Data</button>
+                    <small>Use only when running the backend server</small>
+                    <span id="buttonAlert"></span>
+                </div>
+                
+                <button id="resetBtn" class="btn-secondary" title="Reset View">Reset View</button>
             </div>
         </div>
         
-        <div id="map"></div>
-
-        <div class = "box">
-        <div class="legend">
-            <h3>Risk Level</h3>
-            <div class="legend-item">
-                <span class="legend-color" style="background-color: #800026;"></span>
-                <span>Very High (0.8 - 1.0)</span>
+        <div class="map-container">
+            <div id="map"></div>
+            
+            <button id="toggleLegendBtn" class="toggle-legend-btn" title="Toggle Legend">Legend</button>
+            
+            <div class="legend legend-overlay" id="legendOverlay">
+                <h3>Risk Level</h3>
+                <div class="legend-item">
+                    <span class="legend-color" style="background-color: #800026;"></span>
+                    <span>Very High (0.8 - 1.0)</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-color" style="background-color: #BD0026;"></span>
+                    <span>High (0.6 - 0.8)</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-color" style="background-color: #E31A1C;"></span>
+                    <span>Moderate-High (0.5 - 0.6)</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-color" style="background-color: #FC4E2A;"></span>
+                    <span>Moderate (0.4 - 0.5)</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-color" style="background-color: #FD8D3C;"></span>
+                    <span>Low-Moderate (0.3 - 0.4)</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-color" style="background-color: #FEB24C;"></span>
+                    <span>Low (0.2 - 0.3)</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-color" style="background-color: #FED976;"></span>
+                    <span>Very Low (0.0 - 0.2)</span>
+                </div>
             </div>
-            <div class="legend-item">
-                <span class="legend-color" style="background-color: #BD0026;"></span>
-                <span>High (0.6 - 0.8)</span>
-            </div>
-            <div class="legend-item">
-                <span class="legend-color" style="background-color: #E31A1C;"></span>
-                <span>Moderate-High (0.5 - 0.6)</span>
-            </div>
-            <div class="legend-item">
-                <span class="legend-color" style="background-color: #FC4E2A;"></span>
-                <span>Moderate (0.4 - 0.5)</span>
-            </div>
-            <div class="legend-item">
-                <span class="legend-color" style="background-color: #FD8D3C;"></span>
-                <span>Low-Moderate (0.3 - 0.4)</span>
-            </div>
-            <div class="legend-item">
-                <span class="legend-color" style="background-color: #FEB24C;"></span>
-                <span>Low (0.2 - 0.3)</span>
-            </div>
-            <div class="legend-item">
-                <span class="legend-color" style="background-color: #FED976;"></span>
-                <span>Very Low (0.0 - 0.2)</span>
-            </div>
-        </div>
-
-        <div class ="summary">
-            <h3>Summary</h3>
-
-        </div>
+            
+            <div class="summary"></div>
         </div>
         
         <div class="info-panel">

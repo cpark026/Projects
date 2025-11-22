@@ -4,7 +4,8 @@ let markerClusterGroup;
 let crashData = [];
 let currentHour = 12;
 let currentThreshold = 0.3;
-let currentDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+// Store date in YYYY-MM-DD format internally for consistency with CSV files
+let currentDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 let isGeneratingPredictions = false;
 
 let paginatedData = [];
@@ -24,10 +25,6 @@ function initMap() {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
         maxZoom: 19
     }).addTo(map);
-
-    // L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
-    // attribution: 'Tiles &copy; Esri'
-    // }).addTo(map);
 
     // Initialize marker cluster group
     markerClusterGroup = L.markerClusterGroup({
@@ -100,14 +97,17 @@ function updateMarkers() {
     // Clear existing markers
     markerClusterGroup.clearLayers();
 
+    // Convert hour 24 to 0 (midnight)
+    const displayHour = currentHour === 24 ? 0 : currentHour;
+
     // Filter data by current date, hour and threshold
     const filteredData = crashData.filter(location => {
         // If location has a date field, filter by it; otherwise show all
         const dateMatch = !location.date || location.date === currentDate;
-        return dateMatch && location.hour === currentHour && location.probability >= currentThreshold;
+        return dateMatch && location.hour === displayHour && location.probability >= currentThreshold;
     });
 
-    console.log(`Displaying ${filteredData.length} locations for ${currentDate} at hour ${currentHour} with threshold ${currentThreshold}`);
+    console.log(`Displaying ${filteredData.length} locations for ${currentDate} at hour ${displayHour} with threshold ${currentThreshold}`);
 
     // Add markers for filtered data
     filteredData.forEach(location => {
@@ -152,11 +152,12 @@ function renderSummaryPage() {
     const page = paginatedData[currentPage];
     const visibleItems = page.slice(0, itemsPerPage);
 
-    const itemsHTML = visibleItems.map(item => `
-        <div class="summaryItem">
+    const itemsHTML = visibleItems.map((item, index) => `
+        <div class="summaryItem clickable-item" data-index="${index}" style="cursor: pointer; padding: 10px; border-radius: 5px; transition: background-color 0.2s;">
             <strong>${item.location_name}</strong><br>
+            Hour: ${formatHour(item.hour)}<br>
             Probability: ${item.probability.toFixed(3)}<br>
-            Lat: ${item.lat}, Lon: ${item.lon}
+            Lat: ${item.lat.toFixed(4)}, Lon: ${item.lon.toFixed(4)}
         </div>
     `).join("");
 
@@ -171,6 +172,34 @@ function renderSummaryPage() {
             <button id="nextPage">Next →</button>
         </div>
     `;
+
+    // Add click handlers to summary items
+    const summaryItems = summaryDiv.querySelectorAll('.clickable-item');
+    summaryItems.forEach((item, index) => {
+        item.addEventListener('mouseenter', () => {
+            item.style.backgroundColor = '#f0f0f0';
+        });
+        item.addEventListener('mouseleave', () => {
+            item.style.backgroundColor = 'transparent';
+        });
+        item.addEventListener('click', () => {
+            const page = paginatedData[currentPage];
+            const clickedItem = page[index];
+            
+            // Set the hour slider to the item's hour
+            currentHour = clickedItem.hour;
+            document.getElementById('hourSlider').value = currentHour;
+            document.getElementById('hourDisplay').textContent = formatHour(currentHour);
+            
+            // Center map on the location
+            map.setView([clickedItem.lat, clickedItem.lon], 12);
+            
+            // Update markers to show the new hour
+            updateMarkers();
+            updateHourSliderThumb();
+            createSummary();
+        });
+    });
 
     // Reattach events because we re-render the HTML
     document.getElementById("nextPage").onclick = () => {
@@ -259,7 +288,7 @@ async function loadPredictionsForDate(date) {
         
         console.log('Loading predictions for:', date);
         
-        // Load the date-specific CSV file
+        // Load the date-specific CSV file (date is already in YYYY-MM-DD format)
         const csvPath = `data/by-date/predictions_${date}.csv`;
         
         const response = await fetch(csvPath);
@@ -405,6 +434,21 @@ function resetView() {
 
 // Initialize event listeners
 function initEventListeners() {
+    // Legend toggle button
+    const toggleLegendBtn = document.getElementById('toggleLegendBtn');
+    const legendOverlay = document.getElementById('legendOverlay');
+    
+    if (toggleLegendBtn && legendOverlay) {
+        // Initially show the legend
+        legendOverlay.classList.remove('hidden');
+        
+        toggleLegendBtn.addEventListener('click', () => {
+            legendOverlay.classList.toggle('hidden');
+            // Update button text to indicate state
+            toggleLegendBtn.textContent = legendOverlay.classList.contains('hidden') ? 'Show Legend' : 'Hide Legend';
+        });
+    }
+    
     // Date picker
     const datePicker = document.getElementById('datePicker');
     if (datePicker) {
@@ -497,9 +541,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     initMap();
     initEventListeners();
+   // createSummary();
 
     // Set date picker to current date
     console.log(`Current Date: ${currentDate}`);
+    // Set date picker to current date (it expects YYYY-MM-DD)
     document.getElementById('datePicker').value = currentDate;
 
     // Initialize sliders
@@ -519,4 +565,5 @@ document.addEventListener('DOMContentLoaded', () => {
             loadData();
         }
     });
+    createSummary();
 });
