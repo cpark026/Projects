@@ -355,6 +355,5 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Automatically load sample data on startup
     loadData();
-
     createSummary();
 });
