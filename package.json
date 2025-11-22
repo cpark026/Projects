@@ -1,0 +1,21 @@
+{
+  "name": "virginia-crash-predictions",
+  "version": "1.0.0",
+  "description": "Virginia Crash Hot Spot Predictions - Interactive map with ML predictions",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": ["crash", "predictions", "virginia", "mapping"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5"
+  },
+  "devDependencies": {},
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}
