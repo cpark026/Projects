@@ -6,10 +6,59 @@
 library(dplyr)
 library(readr)
 library(lubridate)
+library(sf)
+library(osmdata)
 
-# Function to snap predictions to verified road locations
+# Function to filter predictions to remove offshore/unrealistic locations
 snap_to_roads <- function(predictions_df) {
-  va_cities_roads <- tribble(
+  cat("  Filtering to remove offshore/unrealistic locations...\n")
+  
+  before <- nrow(predictions_df)
+  
+  va_cities <- tribble(
+    ~lat,     ~lon,
+    37.5407,  -77.4360,  # Richmond
+    36.8529,  -75.9780,  # Virginia Beach
+    36.8508,  -76.2859,  # Norfolk
+    36.7682,  -76.2875,  # Chesapeake
+    38.8816,  -77.0910,  # Arlington
+    37.0871,  -76.4730,  # Newport News
+    38.8048,  -77.0469,  # Alexandria
+    37.0299,  -76.3452,  # Hampton
+    37.2710,  -79.9414,  # Roanoke
+    36.8354,  -76.2983   # Portsmouth
+  )
+  
+  # Vectorized filtering (fast, no rowwise)
+  predictions_df <- predictions_df %>%
+    mutate(
+      # Min distance to any city (vectorized)
+      min_city_dist = pmin(
+        sqrt((lat - va_cities$lat[1])^2 + (lon - va_cities$lon[1])^2),
+        sqrt((lat - va_cities$lat[2])^2 + (lon - va_cities$lon[2])^2),
+        sqrt((lat - va_cities$lat[3])^2 + (lon - va_cities$lon[3])^2),
+        sqrt((lat - va_cities$lat[4])^2 + (lon - va_cities$lon[4])^2),
+        sqrt((lat - va_cities$lat[5])^2 + (lon - va_cities$lon[5])^2),
+        sqrt((lat - va_cities$lat[6])^2 + (lon - va_cities$lon[6])^2),
+        sqrt((lat - va_cities$lat[7])^2 + (lon - va_cities$lon[7])^2),
+        sqrt((lat - va_cities$lat[8])^2 + (lon - va_cities$lon[8])^2),
+        sqrt((lat - va_cities$lat[9])^2 + (lon - va_cities$lon[9])^2),
+        sqrt((lat - va_cities$lat[10])^2 + (lon - va_cities$lon[10])^2)
+      ),
+      in_virginia = lat > 36.55 & lat < 39.45 & lon < -75.1 & lon > -83.5,
+      keep_pred = (min_city_dist < 0.12) | in_virginia
+    ) %>%
+    filter(keep_pred) %>%
+    select(-min_city_dist, -in_virginia, -keep_pred)
+  
+  after <- nrow(predictions_df)
+  cat(sprintf("    Filtering: %d -> %d predictions\n", before, after))
+  return(predictions_df)
+}
+
+# Fallback function: distance-based filtering
+snap_to_roads_distance <- function(predictions_df) {
+  va_cities <- tribble(
     ~city,            ~lat,     ~lon,
     "Richmond",       37.5407,  -77.4360,
     "Virginia Beach", 36.8529,  -75.9780,
@@ -23,19 +72,12 @@ snap_to_roads <- function(predictions_df) {
     "Portsmouth",     36.8354,  -76.2983
   )
   
-  before <- nrow(predictions_df)
-  
-  predictions_df <- predictions_df %>%
+  predictions_df %>%
     rowwise() %>%
-    mutate(min_distance = min(sqrt((lat - va_cities_roads$lat)^2 + (lon - va_cities_roads$lon)^2))) %>%
+    mutate(min_distance = min(sqrt((lat - va_cities$lat)^2 + (lon - va_cities$lon)^2))) %>%
     filter(min_distance < 0.15) %>%
     ungroup() %>%
     select(-min_distance)
-  
-  after <- nrow(predictions_df)
-  cat(sprintf("  Snapped to roads: %d -> %d predictions\n", before, after))
-  
-  return(predictions_df)
 }
 
 # Load required libraries
@@ -190,34 +232,10 @@ for (i in seq_along(dates)) {
   export_crash_predictions(predictions, output_file, date)
 }
 
-# Also create a combined CSV with all dates
-cat("\nCreating combined predictions file...\n")
-all_predictions <- NULL
-
-for (date in dates) {
-  date_str <- format(date, "%Y-%m-%d")
-  predictions <- generate_predictions_for_date(date)
-  predictions$date <- date_str
-  
-  if (is.null(all_predictions)) {
-    all_predictions <- predictions
-  } else {
-    all_predictions <- rbind(all_predictions, predictions)
-  }
-}
-
-write_csv(all_predictions, "../data/crash_predictions_all_dates.csv")
-cat("  ✓ Exported combined file: crash_predictions_all_dates.csv\n")
-
 cat("\n================================\n")
-cat("Summary Statistics:\n")
-cat("Total unique dates:", length(unique(all_predictions$date)), "\n")
-cat("Total predictions:", nrow(all_predictions), "\n")
-cat("Hours covered:", paste(sort(unique(all_predictions$hour)), collapse = ", "), "\n")
-cat("Probability range:", sprintf("%.3f - %.3f", min(all_predictions$probability), max(all_predictions$probability)), "\n")
-cat("Locations:", paste(unique(all_predictions$location_name), collapse = ", "), "\n")
-cat("================================\n\n")
-
 cat("✓ All prediction files generated successfully!\n")
 cat("Files are located in: data/by-date/\n")
-cat("Combined file: data/crash_predictions_all_dates.csv\n")
+cat("Total files created:", length(dates), "\n")
+cat("Date range:", format(min(dates), "%Y-%m-%d"), "to", format(max(dates), "%Y-%m-%d"), "\n")
+cat("Predictions per file: 720\n")
+cat("================================\n\n")
