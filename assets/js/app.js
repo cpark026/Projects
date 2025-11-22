@@ -4,6 +4,14 @@ let markerClusterGroup;
 let crashData = [];
 let currentHour = 12;
 let currentThreshold = 0.3;
+const options = {
+  timeZone: 'America/New_York', 
+  year: 'numeric',
+  month: 'numeric',
+  day: 'numeric'
+};
+let currentDate = new Date().toLocaleDateString("en-US", options);
+
 
 // Initialize map
 function initMap() {
@@ -25,7 +33,6 @@ function initMap() {
     });
     
     map.addLayer(markerClusterGroup);
-    
     console.log('Map initialized');
 }
 
@@ -267,6 +274,12 @@ document.addEventListener('DOMContentLoaded', () => {
     
     initMap();
     initEventListeners();
+
+    console.log(`Current Date: ${currentDate}`);
+    const month = currentDate.split('/')[0];
+    const day = currentDate.split('/')[1];
+    const year = currentDate.split('/')[2];
+    document.getElementById('datePicker').value  = `${year}-${month}-${day}`;
     
     // Automatically load sample data on startup
     loadData();

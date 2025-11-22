@@ -60,13 +60,23 @@ header h1 {
     margin-left: 10px;
 }
 
-#hourSlider, #thresholdSlider {
+#hourSlider{
     width: 100%;
     height: 8px;
     border-radius: 5px;
     outline: none;
     -webkit-appearance: none;
     background: linear-gradient(to right, #667eea, #764ba2);
+    margin: 10px 0;
+}
+
+#thresholdSlider {
+    width: 100%;
+    height: 8px;
+    border-radius: 5px;
+    outline: none;
+    -webkit-appearance: none;
+    background: linear-gradient(to right, #FED976, #800026);
     margin: 10px 0;
 }
 
