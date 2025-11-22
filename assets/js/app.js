@@ -5,10 +5,10 @@ let crashData = [];
 let currentHour = 12;
 let currentThreshold = 0.3;
 const options = {
-  timeZone: 'America/New_York', 
-  year: 'numeric',
-  month: 'numeric',
-  day: 'numeric'
+    timeZone: 'America/New_York',
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric'
 };
 let currentDate = new Date().toLocaleDateString("en-US", options);
 
@@ -350,8 +350,34 @@ const slider = document.getElementById("thresholdSlider");
 slider.addEventListener("input", () => {
     currentThreshold = slider.value;
     console.log("Threshold changed to:", currentThreshold);
+    updateThresholdSliderThumb(); // Set initial color
     createSummary();
 });
+
+// Color interpolation helper
+function interpolateColor(color1, color2, t) {
+    const r = Math.round(color1[0] + (color2[0] - color1[0]) * t);
+    const g = Math.round(color1[1] + (color2[1] - color1[1]) * t);
+    const b = Math.round(color1[2] + (color2[2] - color1[2]) * t);
+    return `rgb(${r}, ${g}, ${b})`;
+}
+
+// Hour slider: #667eea (102,126,234) → #764ba2 (118,75,162)
+function updateHourSliderThumb() {
+    const slider = document.getElementById('hourSlider');
+    const t = (slider.value - slider.min) / (slider.max - slider.min);
+    const color = interpolateColor([102, 126, 234], [118, 75, 162], t);
+    slider.style.setProperty('--thumb-color', color);
+}
+
+// Threshold slider: #FED976 (254,217,118) → #800026 (128,0,38)
+function updateThresholdSliderThumb() {
+    const slider = document.getElementById('thresholdSlider');
+    const t = (slider.value - slider.min) / (slider.max - slider.min);
+    const color = interpolateColor([254, 217, 118], [128, 0, 38], t);
+    slider.style.setProperty('--thumb-color', color);
+}
+
 
 // Initialize app when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
@@ -364,8 +390,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const month = currentDate.split('/')[0];
     const day = currentDate.split('/')[1];
     const year = currentDate.split('/')[2];
-    document.getElementById('datePicker').value  = `${year}-${month}-${day}`;
-    
+    document.getElementById('datePicker').value = `${year}-${month}-${day}`;
+
+    const hourSlider = document.getElementById('hourSlider');
+    updateThresholdSliderThumb();
+
+    if (hourSlider) {
+        hourSlider.addEventListener('input', updateHourSliderThumb);
+        updateHourSliderThumb(); // Set initial color
+    }
+
     // Automatically load sample data on startup
     loadData();
     createSummary();
