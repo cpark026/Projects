@@ -43,7 +43,6 @@ export_crash_predictions <- function(predictions_df, output_file = "crash_predic
   
   cat(sprintf("Exported %d predictions to %s\n", nrow(predictions_df), output_file))
   cat("Columns:", paste(names(predictions_df), collapse = ", "), "\n")
-  
   return(invisible(output_file))
 }
 
