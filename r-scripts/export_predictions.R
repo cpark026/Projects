@@ -6,6 +6,8 @@
 library(dplyr)
 library(readr)
 library(lubridate)
+library(sf)
+library(osmdata)
 
 # Get the script's directory and set it as working directory
 # This handles both interactive and command-line execution
@@ -39,12 +41,60 @@ if (is.character(prediction_date)) {
 cat("Generating predictions for:", format(prediction_date, "%Y-%m-%d"), "\n")
 
 # Function to snap predictions to verified road locations
-# Filters predictions to be within reasonable distance of known roads
+# Filters predictions to remove offshore and unrealistic locations
 snap_to_roads <- function(predictions_df) {
-  cat("Filtering predictions to road-likely locations...\n")
+  cat("Filtering predictions to remove offshore/unrealistic locations...\n")
   
-  # Virginia major cities with road network centers
-  va_cities_roads <- tribble(
+  before_count <- nrow(predictions_df)
+  
+  # Virginia cities - keep predictions near these
+  va_cities <- tribble(
+    ~lat,     ~lon,
+    37.5407,  -77.4360,  # Richmond
+    36.8529,  -75.9780,  # Virginia Beach
+    36.8508,  -76.2859,  # Norfolk
+    36.7682,  -76.2875,  # Chesapeake
+    38.8816,  -77.0910,  # Arlington
+    37.0871,  -76.4730,  # Newport News
+    38.8048,  -77.0469,  # Alexandria
+    37.0299,  -76.3452,  # Hampton
+    37.2710,  -79.9414,  # Roanoke
+    36.8354,  -76.2983   # Portsmouth
+  )
+  
+  # Vectorized distance calculation to nearest city
+  predictions_df <- predictions_df %>%
+    mutate(
+      # Calculate distances to all cities and find minimum (vectorized)
+      min_city_dist = pmin(
+        sqrt((lat - va_cities$lat[1])^2 + (lon - va_cities$lon[1])^2),
+        sqrt((lat - va_cities$lat[2])^2 + (lon - va_cities$lon[2])^2),
+        sqrt((lat - va_cities$lat[3])^2 + (lon - va_cities$lon[3])^2),
+        sqrt((lat - va_cities$lat[4])^2 + (lon - va_cities$lon[4])^2),
+        sqrt((lat - va_cities$lat[5])^2 + (lon - va_cities$lon[5])^2),
+        sqrt((lat - va_cities$lat[6])^2 + (lon - va_cities$lon[6])^2),
+        sqrt((lat - va_cities$lat[7])^2 + (lon - va_cities$lon[7])^2),
+        sqrt((lat - va_cities$lat[8])^2 + (lon - va_cities$lon[8])^2),
+        sqrt((lat - va_cities$lat[9])^2 + (lon - va_cities$lon[9])^2),
+        sqrt((lat - va_cities$lat[10])^2 + (lon - va_cities$lon[10])^2)
+      ),
+      # Simple geographic bounds check (fast)
+      in_virginia = lat > 36.55 & lat < 39.45 & lon < -75.1 & lon > -83.5,
+      # Keep if: near a city OR in Virginia interior
+      keep_pred = (min_city_dist < 0.12) | in_virginia
+    ) %>%
+    filter(keep_pred) %>%
+    select(-min_city_dist, -in_virginia, -keep_pred)
+  
+  after_count <- nrow(predictions_df)
+  cat(sprintf("  Filtering: %d -> %d predictions (removed %d offshore)\n", before_count, after_count, before_count - after_count))
+  
+  return(predictions_df)
+}
+
+# Fallback function: snap to roads using distance to city centers
+snap_to_roads_distance <- function(predictions_df) {
+  va_cities <- tribble(
     ~city,            ~lat,     ~lon,
     "Richmond",       37.5407,  -77.4360,
     "Virginia Beach", 36.8529,  -75.9780,
@@ -58,22 +108,16 @@ snap_to_roads <- function(predictions_df) {
     "Portsmouth",     36.8354,  -76.2983
   )
   
-  # Keep predictions within 15km of any city center (where road networks exist)
   before_count <- nrow(predictions_df)
   
   predictions_df <- predictions_df %>%
     rowwise() %>%
-    mutate(
-      min_distance = min(sqrt((lat - va_cities_roads$lat)^2 + (lon - va_cities_roads$lon)^2))
-    ) %>%
-    filter(min_distance < 0.15) %>%  # ~15 km radius from city centers
+    mutate(min_distance = min(sqrt((lat - va_cities$lat)^2 + (lon - va_cities$lon)^2))) %>%
+    filter(min_distance < 0.15) %>%
     ungroup() %>%
     select(-min_distance)
   
   after_count <- nrow(predictions_df)
-  cat(sprintf("Road filtering: %d -> %d predictions (removed %d unlikely locations)\n", 
-              before_count, after_count, before_count - after_count))
-  
   return(predictions_df)
 }
 
