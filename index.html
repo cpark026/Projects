@@ -28,24 +28,30 @@
             <p class="subtitle">Interactive hourly crash risk visualization based on ML predictions (2017-2025)</p>
         </header>
         
+        <div class="calendar">
+            <label for="datePicker">
+                <strong>Select Date:</strong>
+            </label>
+            <input type="date" id="datePicker" min="2017-01-01">
+        </div>
+        
         <div class="controls-panel">
             <div class="time-control">
                 <label for="hourSlider">
                     <strong>Select Hour:</strong>
                     <span id="hourDisplay">12:00</span>
                 </label>
-                <input type="range" id="hourSlider" min="0" max="23" value="12" step="1">
+                <input type="range" id="hourSlider" min="0" max="24" value="12" step="1">
                 <div class="hour-labels">
                     <span>00:00</span>
                     <span>06:00</span>
                     <span>12:00</span>
                     <span>18:00</span>
-                    <span>23:00</span>
+                    <span>24:00</span>
                 </div>
             </div>
             
-            <div class="filter-controls">
-                <label>
+            <div class="filter-controls">                <label>
                     <strong>Min Risk Threshold:</strong>
                     <span id="thresholdDisplay">0.3</span>
                 </label>
