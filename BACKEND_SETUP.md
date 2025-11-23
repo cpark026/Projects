@@ -81,7 +81,7 @@ Projects/r-scripts/models/virginia_crash_severity_model.rds
 ### Start the backend server:
 
 ```powershell
-cd c:\Users\Christian\Desktop\code\enma754\gitPull\Projects
+cd \Projects
 npm start
 ```
 
