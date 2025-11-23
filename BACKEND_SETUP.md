@@ -47,7 +47,7 @@ If this doesn't work, you need to add R to your system PATH:
 Navigate to the project folder and install dependencies:
 
 ```powershell
-cd c:\Users\Christian\Desktop\code\enma754\gitPull\Projects
+cd \Projects
 npm install
 ```
 
