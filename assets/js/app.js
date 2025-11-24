@@ -128,6 +128,8 @@ function createSummary() {
         loc => loc.probability >= currentThreshold
     );
 
+    summaryData.sort((a, b) => b.probability - a.probability);
+
     // break into chunks of 10
     paginatedData = [];
     for (let i = 0; i < summaryData.length; i += chunkSize) {
@@ -191,15 +193,15 @@ function renderSummaryPage() {
         item.addEventListener('click', () => {
             const page = paginatedData[currentPage];
             const clickedItem = page[index];
-            
+
             // Set the hour slider to the item's hour
             currentHour = clickedItem.hour;
             document.getElementById('hourSlider').value = currentHour;
             document.getElementById('hourDisplay').textContent = formatHour(currentHour);
-            
+
             // Center map on the location
             map.setView([clickedItem.lat, clickedItem.lon], 12);
-            
+
             // Update markers to show the new hour
             updateMarkers();
             updateHourSliderThumb();
@@ -291,26 +293,26 @@ async function loadPredictionsForDate(date) {
         if (statusElement) {
             statusElement.innerHTML = '<h3>Loading predictions...</h3><p>Loading data for ' + date + '</p>';
         }
-        
+
         console.log('Loading predictions for:', date);
-        
+
         // Load the date-specific CSV file (date is already in YYYY-MM-DD format)
         const csvPath = `data/by-date/predictions_${date}.csv`;
-        
+
         const response = await fetch(csvPath);
-        
+
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
+
         const csvText = await response.text();
         crashData = parseCSV(csvText);
-        
+
         console.log(`Loaded ${crashData.length} predictions for ${date}`);
         updateMarkers();
         createSummary();
         return true;
-        
+
     } catch (error) {
         console.error('Error loading predictions:', error);
         const statusElement = document.querySelector('.summary');
@@ -327,18 +329,18 @@ async function generatePredictionsFromBackend() {
         console.log('Predictions already being generated...');
         return false;
     }
-    
+
     try {
         isGeneratingPredictions = true;
-        
+
         // Show loading status
         const statusElement = document.querySelector('.summary');
         if (statusElement) {
             statusElement.innerHTML = '<h3>Generating predictions...</h3><p>Running R script for ' + currentDate + '</p>';
         }
-        
+
         console.log('Requesting predictions for:', currentDate);
-        
+
         // Call backend API
         const response = await fetch(`${API_URL}/predictions`, {
             method: 'POST',
@@ -347,15 +349,15 @@ async function generatePredictionsFromBackend() {
             },
             body: JSON.stringify({ date: currentDate })
         });
-        
+
         if (!response.ok) {
             const error = await response.json();
             throw new Error(error.error || 'Failed to generate predictions');
         }
-        
+
         const result = await response.json();
         console.log('Predictions generated:', result.message);
-        
+
         // Parse CSV from response
         if (result.csv) {
             crashData = parseCSV(result.csv);
@@ -364,7 +366,7 @@ async function generatePredictionsFromBackend() {
             createSummary();
             return true;
         }
-        
+
     } catch (error) {
         console.error('Error generating predictions:', error);
         const statusElement = document.querySelector('.summary');
@@ -372,7 +374,7 @@ async function generatePredictionsFromBackend() {
             statusElement.innerHTML = '<h3>Error</h3><p>Failed to generate predictions: ' + error.message + '</p><p>Make sure the backend server is running: npm start</p>';
         }
         return false;
-        
+
     } finally {
         isGeneratingPredictions = false;
     }
@@ -443,25 +445,25 @@ function initEventListeners() {
     // Legend toggle button
     const toggleLegendBtn = document.getElementById('toggleLegendBtn');
     const legendOverlay = document.getElementById('legendOverlay');
-    
+
     if (toggleLegendBtn && legendOverlay) {
         // Initially show the legend
         legendOverlay.classList.remove('hidden');
-        
+
         toggleLegendBtn.addEventListener('click', () => {
             legendOverlay.classList.toggle('hidden');
             // Update button text to indicate state
             toggleLegendBtn.textContent = legendOverlay.classList.contains('hidden') ? 'Show Legend' : 'Hide Legend';
         });
     }
-    
+
     // Date picker
     const datePicker = document.getElementById('datePicker');
     if (datePicker) {
         datePicker.addEventListener('change', async (e) => {
             currentDate = e.target.value;
             console.log(`Date changed to: ${currentDate}`);
-            
+
             // Load pre-generated predictions for the selected date
             await loadPredictionsForDate(currentDate);
         });
@@ -493,7 +495,7 @@ function initEventListeners() {
     document.getElementById('loadDataBtn').addEventListener('click', async () => {
         // Try to generate from backend API first
         const success = await generatePredictionsFromBackend();
-        
+
         if (!success) {
             // If backend is not available, try to load pre-generated CSV
             console.log('Backend not available, trying pre-generated CSV...');
@@ -547,7 +549,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     initMap();
     initEventListeners();
-   // createSummary();
+    // createSummary();
 
     // Set date picker to current date
     console.log(`Current Date: ${currentDate}`);
