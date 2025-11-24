@@ -28,18 +28,18 @@ npm start
 
 ## Features
 
-- ✅ **Interactive Map**: Web-based visualization using Leaflet.js with smooth panning/zooming
-- ✅ **Hourly Time Slider**: View crash risk predictions for any hour (0:00 - 23:00)
-- ✅ **Risk Threshold Filter**: Adjust minimum risk level to focus on high-risk areas
-- ✅ **Color-Coded Risk Levels**: Seven-tier color scheme from very low to very high risk
-- ✅ **Detailed Popups**: Click markers to see location details, probability scores, and hours
-- ✅ **Marker Clustering**: Automatic grouping of nearby markers for better performance
-- ✅ **Confidence Scoring**: 0-100 confidence scores indicate model certainty
-- ✅ **Geographic Filtering**: Removes offshore/unrealistic predictions
-- ✅ **Responsive Design**: Works on desktop, tablet, and mobile devices
-- ✅ **Sample Data**: Includes demonstration data for immediate testing
-- ✅ **Date-Based Predictions**: Generate predictions for any date via backend
-- ✅ **Batch Processing**: Generate 31 days of predictions in ~5.5 seconds
+- **Interactive Map**: Web-based visualization using Leaflet.js with smooth panning/zooming
+- **Hourly Time Slider**: View crash risk predictions for any hour (0:00 - 23:00)
+- **Risk Threshold Filter**: Adjust minimum risk level to focus on high-risk areas
+- **Color-Coded Risk Levels**: Seven-tier color scheme from very low to very high risk
+- **Detailed Popups**: Click markers to see location details, probability scores, and hours
+- **Marker Clustering**: Automatic grouping of nearby markers for better performance
+- **Confidence Scoring**: 0-100 confidence scores indicate model certainty
+- **Geographic Filtering**: Removes offshore/unrealistic predictions
+- **Responsive Design**: Works on desktop, tablet, and mobile devices
+- **Sample Data**: Includes demonstration data for immediate testing
+- **Date-Based Predictions**: Generate predictions for any date via backend
+- **Batch Processing**: Generate 31 days of predictions in ~5.5 seconds
 
 ## Project Structure
 
@@ -60,9 +60,9 @@ Projects/
 │       └── predictions_YYYY-MM-DD.csv   # 31 days of predictions (720 each)
 └── r-scripts/
     ├── export_predictions.R             # Single-date prediction export
-    ├── generate_date_range_predictions.R # Batch date range generation
+    ├─ generate_date_range_predictions.R # Batch date range generation
     └── models/
-        └── virginia_crash_severity_model.rds # Trained XGBoost model (135.62 MB)
+        └── virginia_crash_severity_model.rds # Trained model (135.62 MB)
 ```
 
 ## Data Format
@@ -276,46 +276,6 @@ predictions <- data.frame(
 write_csv(predictions, "data/crash_predictions.csv")
 ```
 
-## Customization
-
-### Change Map Center and Zoom
-
-Edit `assets/js/app.js`:
-```javascript
-// Line ~10
-map = L.map('map').setView([37.5407, -78.8], 7);
-//                           [lat, lon], zoom level
-```
-
-### Modify Risk Colors
-
-Edit the `getRiskColor()` function in `assets/js/app.js`:
-```javascript
-function getRiskColor(probability) {
-    if (probability >= 0.8) return '#800026';  // Dark Red
-    if (probability >= 0.6) return '#BD0026';  // Red
-    if (probability >= 0.5) return '#E31A1C';  // Orange-Red
-    // ... etc
-}
-```
-
-### Adjust Default Values
-
-Edit `assets/js/app.js`:
-```javascript
-const DEFAULT_RISK_THRESHOLD = 0.3;  // Default risk threshold (0-1)
-const DEFAULT_HOUR = 12;              // Default hour (0-23)
-```
-
-### Change Default Marker Cluster Radius
-
-Edit `assets/js/app.js`:
-```javascript
-markerClusterGroup = L.markerClusterGroup({
-    maxClusterRadius: 80  // Increase to cluster more markers
-});
-```
-
 ## Troubleshooting
 
 ### Map Not Displaying
@@ -518,13 +478,13 @@ This project is licensed under the MIT License. See LICENSE file for details.
 ## Version History
 
 ### v2.0 (Current - November 23, 2025)
-- ✅ Vectorized geographic filtering (90%+ performance improvement)
-- ✅ Confidence scoring for all predictions (0-100)
-- ✅ 31-day prediction batch generation (~5.5 seconds)
-- ✅ Backend API integration for date-based predictions
-- ✅ Local path configuration (cross-platform)
-- ✅ Consolidated single README documentation
-- ✅ Enhanced customization options
+- Vectorized geographic filtering (90%+ performance improvement)
+- Confidence scoring for all predictions (0-100)
+- 31-day prediction batch generation (~5.5 seconds)
+- Backend API integration for date-based predictions
+- Local path configuration (cross-platform)
+- Consolidated single README documentation
+- Enhanced customization options
 
 ### v1.0 (November 20, 2025)
 - Initial interactive map with sample data
@@ -537,7 +497,6 @@ This project is licensed under the MIT License. See LICENSE file for details.
 - Virginia Department of Transportation for crash data
 - OpenStreetMap contributors for map tiles
 - Leaflet.js team for the mapping library
-- XGBoost developers for the ML framework
 
 ## Future Enhancements
 
