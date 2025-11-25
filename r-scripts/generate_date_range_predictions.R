@@ -97,7 +97,7 @@ if (exists("rstudioapi") && rstudioapi::isAvailable()) {
 cat("Working directory:", getwd(), "\n\n")
 
 # Load the trained model
-model <- readRDS("models/virginia_crash_severity_model.rds")
+model <- readRDS("models/accident_prediction_model_improved.rds")
 cat("Model loaded successfully!\n")
 cat("Model class:", class(model), "\n\n")
 
