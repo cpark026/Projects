@@ -255,7 +255,7 @@ generate_predictions <- function() {
 # Main execution
 if (!interactive()) {
   # Load your trained model
-  model <- readRDS("models/virginia_crash_severity_model.rds")
+  model <- readRDS("models/accident_prediction_model_improved.rds")
   
   cat("Model loaded successfully!\n")
   cat("Model class:", class(model), "\n")
