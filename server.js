@@ -9,6 +9,9 @@ const os = require('os');
 const app = express();
 const execPromise = util.promisify(exec);
 
+// OPTIMIZATION: In-memory cache for predictions
+const PREDICTION_CACHE = new Map();
+
 // Middleware
 app.use(cors());
 app.use(express.json());
@@ -79,17 +82,31 @@ app.post('/api/predictions', async (req, res) => {
             formattedDate = date;
         }
         
-        console.log(`Generating predictions for ${formattedDate}...`);
+        console.log(`[${new Date().toISOString()}] Prediction request for ${formattedDate}...`);
+        
+        // OPTIMIZATION 1: Check in-memory cache first (instant)
+        if (PREDICTION_CACHE.has(formattedDate)) {
+            console.log(`✓ Returning cached predictions for ${formattedDate}`);
+            const cachedData = PREDICTION_CACHE.get(formattedDate);
+            return res.json({
+                success: true,
+                message: `Predictions loaded from cache for ${formattedDate}`,
+                csv: cachedData,
+                timestamp: new Date().toISOString(),
+                source: 'cache'
+            });
+        }
         
         // Run R script with date parameter (YYYY-MM-DD format)
         const rScriptPath = path.join(__dirname, 'r-scripts', 'export_predictions.R');
         const command = getRScriptCommand(rScriptPath) + ` "${formattedDate}"`;
         
-        console.log(`Executing: ${command}`);
+        console.log(`Executing optimized R script...`);
         
         const execOptions = { 
             timeout: 120000, // 2 minute timeout
-            cwd: path.join(__dirname, 'r-scripts')
+            cwd: path.join(__dirname, 'r-scripts'),
+            maxBuffer: 10 * 1024 * 1024  // 10MB buffer for large outputs
         };
         
         // Only use bash shell on Linux/WSL
@@ -101,10 +118,10 @@ app.post('/api/predictions', async (req, res) => {
             const { stdout, stderr } = await execPromise(command, execOptions);
             
             if (stderr) {
-                console.log('R Script stderr:', stderr);
+                console.log('R Script notes:', stderr.substring(0, 500));  // Log first 500 chars
             }
             
-            console.log('R Script output:', stdout);
+            console.log('R Script output (first 300 chars):', stdout.substring(0, 300));
             
             // Read the generated CSV file
             const csvPath = path.join(__dirname, 'data', 'crash_predictions.csv');
@@ -115,15 +132,23 @@ app.post('/api/predictions', async (req, res) => {
             
             const csvData = fs.readFileSync(csvPath, 'utf-8');
             
+            // OPTIMIZATION 2: Cache in memory for 1 hour
+            PREDICTION_CACHE.set(formattedDate, csvData);
+            setTimeout(() => {
+                PREDICTION_CACHE.delete(formattedDate);
+                console.log(`Cleared cache for ${formattedDate}`);
+            }, 3600000);  // 1 hour TTL
+            
             res.json({
                 success: true,
                 message: `Predictions generated for ${formattedDate}`,
                 csv: csvData,
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
+                source: 'generated'
             });
             
         } catch (execError) {
-            console.error('R Script execution error:', execError);
+            console.error('R Script execution error:', execError.message);
             return res.status(500).json({ 
                 error: 'Failed to execute R script',
                 details: execError.message 
