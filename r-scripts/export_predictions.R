@@ -5,6 +5,7 @@
 library(dplyr)
 library(readr)
 library(lubridate)
+library(tidyr)
 library(caret)
 library(randomForest)
 
@@ -169,15 +170,24 @@ generate_batch_predictions <- function(model, features_df) {
   
   # Batch predict (vectorized, fast)
   tryCatch({
-    predictions <- predict(model, X, type = "prob")
+    # Try to get predictions - handle both classification and regression models
+    predictions <- tryCatch({
+      # First try: probability predictions (for classification)
+      predict(model, X, type = "prob")
+    }, error = function(e) {
+      # Fallback: regular predictions (for regression or other models)
+      predict(model, X)
+    })
     
-    # If predictions are matrix (binary classification), take probability of crash
+    # Process predictions based on type
     if (is.matrix(predictions)) {
-      probs <- predictions[, 2]  # Probability of crash
+      # Binary classification - take probability of positive class
+      probs <- predictions[, 2]
     } else if (is.numeric(predictions)) {
-      probs <- predictions  # Already single probability column
+      # Regression or single-column output
+      probs <- predictions
     } else {
-      # Fallback: model didn't return expected format
+      # Unexpected format
       cat("⚠ Warning: Unexpected model output format, using synthetic fallback\n")
       probs <- runif(nrow(features_df), 0.1, 0.8)
     }
