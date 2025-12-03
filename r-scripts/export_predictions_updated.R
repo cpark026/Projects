@@ -5,7 +5,6 @@
 library(dplyr)
 library(readr)
 library(lubridate)
-library(tidyr)
 library(randomForest)
 library(gbm)
 
@@ -111,7 +110,7 @@ tryCatch({
       surface_condition = names(sort(table(Roadway.Surface.Condition), decreasing = TRUE))[1],
       collision_type = names(sort(table(Collision.Type), decreasing = TRUE))[1],
       
-      # Time features - capture distribution for hourly predictions
+      # Time features
       avg_month = mean(month, na.rm = TRUE),
       avg_day_of_week = mean(day_of_week, na.rm = TRUE),
       avg_hour = mean(hour, na.rm = TRUE),
@@ -231,72 +230,19 @@ tryCatch({
   max_crashes <- max(training_data$accident_count, na.rm = TRUE)
   probability <- pmin(1, ensemble_pred / (max_crashes / 2))
   
-  # Create hourly predictions (each location predicts for 24 hours)
-  # Adjust predictions based on time of day patterns
-  training_data_expanded <- training_data %>%
-    select(x, y, location_cluster, avg_hour) %>%
-    rowwise() %>%
-    mutate(
-      hour_of_day = list(0:23)
-    ) %>%
-    unnest(hour_of_day)
-  
-  # Expand ensemble predictions for each hour
-  ensemble_pred_expanded <- rep(ensemble_pred, each = 24)
-  
-  # Apply time-of-day adjustment factor
-  # Rush hours (7-9am, 4-6pm) have higher crash probability
-  time_adjustment <- ifelse(
-    training_data_expanded$hour_of_day %in% c(7:9, 16:18),
-    1.5,  # 50% increase during rush hour
-    ifelse(
-      training_data_expanded$hour_of_day >= 22 | training_data_expanded$hour_of_day <= 5,
-      0.7,  # 30% decrease late night
-      1.0   # baseline
-    )
-  )
-  
-  ensemble_pred_adjusted <- ensemble_pred_expanded * time_adjustment
-  probability_adjusted <- pmin(1, ensemble_pred_adjusted / (max_crashes / 2))
-  
-  # Add simple reverse geocoding (approximation based on lat/lon regions)
-  get_city_name <- function(lat, lon) {
-    # Virginia city/town approximations by lat/lon ranges
-    if (lon > -75.8 && lon < -75.0 && lat > 37.2 && lat < 37.6) return("Norfolk")
-    if (lon > -76.5 && lon < -76.0 && lat > 37.2 && lat < 37.5) return("Hampton")
-    if (lon > -77.6 && lon < -77.2 && lat > 37.4 && lat < 37.8) return("Richmond")
-    if (lon > -77.8 && lon < -77.3 && lat > 38.7 && lat < 39.0) return("Alexandria")
-    if (lon > -77.1 && lon < -76.8 && lat > 38.8 && lat < 39.0) return("Washington DC area")
-    if (lon > -78.5 && lon < -77.9 && lat > 37.9 && lat < 38.2) return("Charlottesville")
-    if (lon > -80.0 && lon < -79.5 && lat > 37.1 && lat < 37.4) return("Blacksburg")
-    if (lon > -82.0 && lon < -81.5 && lat > 36.9 && lat < 37.2) return("Bristol")
-    if (lon > -78.9 && lon < -78.4 && lat > 38.6 && lat < 38.9) return("Lynchburg")
-    if (lon > -78.6 && lon < -78.2 && lat > 38.3 && lat < 38.6) return("Roanoke")
-    # Default to nearest major city by lat/lon
-    if (lat < 37.0) return("South Virginia")
-    if (lat < 37.5 && lon > -76.0) return("Hampton Roads")
-    if (lat < 38.2) return("Central Virginia")
-    if (lon < -79.0) return("Southwest Virginia")
-    if (lon < -77.0) return("Northern Virginia")
-    return("Virginia")
-  }
-  
-  predictions <- cbind(training_data_expanded, 
-                       probability = probability_adjusted,
-                       ensemble_pred = ensemble_pred_adjusted) %>%
-    as_tibble() %>%
-    rowwise() %>%
+  predictions <- training_data %>%
+    select(x, y, location_cluster) %>%
     mutate(
       lat = y,
       lon = x,
+      hour = 12,  # Default to midday
+      probability = pmax(0.1, pmin(0.9, probability)),
       confidence_score = round(probability * 100),
       date = format(prediction_date, "%Y-%m-%d"),
-      city = get_city_name(lat, lon),
-      name = paste0(city, " (", round(lat, 3), ", ", round(lon, 3), ")")
+      crash_count_prediction = ensemble_pred,
+      name = location_cluster
     ) %>%
-    ungroup() %>%
-    select(lat, lon, probability, confidence_score, hour_of_day, date, name, city, ensemble_pred) %>%
-    rename(hour = hour_of_day, crash_count_prediction = ensemble_pred)
+    select(lat, lon, probability, confidence_score, hour, date, name, crash_count_prediction)
   
   elapsed <- difftime(Sys.time(), start_time, units = "secs")
   cat("✓ Generated", nrow(predictions), "predictions in", 
@@ -325,8 +271,6 @@ cat("Summary Statistics:\n")
 cat("═══════════════════════════════════════════════════════════════\n")
 cat("Total predictions:    ", nrow(predictions), "\n")
 cat("Unique locations:     ", n_distinct(predictions$name), "\n")
-cat("Hours covered:        ", n_distinct(predictions$hour), " (0-23)\n")
-cat("Unique cities:        ", n_distinct(predictions$city), "\n")
 cat("Prob range:           ", sprintf("%.3f - %.3f", min(predictions$probability), max(predictions$probability)), "\n")
 cat("Avg confidence:       ", sprintf("%.1f%%", mean(predictions$confidence_score)), "\n")
 cat("Crash count range:    ", sprintf("%.0f - %.0f", min(predictions$crash_count_prediction), max(predictions$crash_count_prediction)), "\n")
